@@ -1,15 +1,16 @@
-package main
+package twchatbot
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
-	"gopkg.in/yaml.v2"
 )
+
+type Chatbot struct {
+	ChatbotConfig *ChatbotConfig
+	client        *twitter.Client
+}
 
 type ChatbotConfig struct {
 	Account  Account             `yaml:"account"`
@@ -44,36 +45,28 @@ type QuickReplyDefault struct {
 	Next string `yaml:"next"`
 }
 
-func loadConfig(path string) (*ChatbotConfig, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+func New(config *ChatbotConfig) *Chatbot {
+	httpClient := oauth1.NewConfig(
+		config.Account.ConsumerKey,
+		config.Account.ConsumerSecret,
+	).Client(
+		oauth1.NoContext,
+		oauth1.NewToken(config.Account.AccessToken, config.Account.AccessTokenSecret),
+	)
 
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
+	return &Chatbot{
+		config,
+		twitter.NewClient(httpClient),
 	}
-
-	var c ChatbotConfig
-	err = yaml.Unmarshal(b, &c)
-	if err != nil {
-		return nil, err
-	}
-
-	return &c, nil
 }
 
-func newTwitterClient(ck, cs, at, as string) *twitter.Client {
-	config := oauth1.NewConfig(ck, cs)
-	token := oauth1.NewToken(at, as)
-	httpClient := config.Client(oauth1.NoContext, token)
+func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
+	scenario, ok := c.ChatbotConfig.Scenario[scenarioID]
+	if !ok {
+		err := fmt.Errorf("unknown scenario ID: %s", scenarioID)
+		return err
+	}
 
-	return twitter.NewClient(httpClient)
-}
-
-func sendMessage(client *twitter.Client, recipientID string, scenario *Scenario) error {
 	options := make([]twitter.DirectMessageQuickReplyOption, len(scenario.QuickReply.Options))
 	for i, v := range scenario.QuickReply.Options {
 		options[i] = twitter.DirectMessageQuickReplyOption{
@@ -83,7 +76,7 @@ func sendMessage(client *twitter.Client, recipientID string, scenario *Scenario)
 		}
 	}
 
-	_, _, err := client.DirectMessages.EventsNew(&twitter.DirectMessageEventsNewParams{
+	_, _, err := c.client.DirectMessages.EventsNew(&twitter.DirectMessageEventsNewParams{
 		Event: &twitter.DirectMessageEvent{
 			Type: "message_create",
 			Message: &twitter.DirectMessageEventMessage{
@@ -102,40 +95,4 @@ func sendMessage(client *twitter.Client, recipientID string, scenario *Scenario)
 	})
 
 	return err
-}
-
-func run() error {
-	c, err := loadConfig("./config.yml")
-	if err != nil {
-		return err
-	}
-
-	client := newTwitterClient(
-		c.Account.ConsumerKey,
-		c.Account.ConsumerSecret,
-		c.Account.AccessToken,
-		c.Account.AccessTokenSecret,
-	)
-
-	recipientID := "1245969416694587393" // @R8472
-	next := "s1"
-
-	s, ok := c.Scenario[next]
-	if !ok {
-		err = fmt.Errorf("unknown scenario: %s", next)
-		return err
-	}
-
-	err = sendMessage(client, recipientID, &s)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
 }
