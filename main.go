@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,11 +18,11 @@ import (
 )
 
 type Chatbot struct {
-	ChatbotConfig *ChatbotConfig
-	client        *twitter.Client
+	config *config
+	client *twitter.Client
 }
 
-type ChatbotConfig struct {
+type config struct {
 	Account  Account             `yaml:"account"`
 	Scenario map[string]Scenario `yaml:"scenario"`
 }
@@ -52,7 +55,7 @@ type QuickReplyDefault struct {
 	Next string `yaml:"next"`
 }
 
-func New(c *ChatbotConfig) *Chatbot {
+func New(c *config) *Chatbot {
 	config := oauth1.NewConfig(c.Account.ConsumerKey, c.Account.ConsumerSecret)
 	token := oauth1.NewToken(c.Account.AccessToken, c.Account.AccessTokenSecret)
 	client := config.Client(oauth1.NoContext, token)
@@ -62,7 +65,7 @@ func New(c *ChatbotConfig) *Chatbot {
 }
 
 func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
-	scenario, ok := c.ChatbotConfig.Scenario[scenarioID]
+	scenario, ok := c.config.Scenario[scenarioID]
 	if !ok {
 		err := fmt.Errorf("unknown scenario ID: %s", scenarioID)
 		return err
@@ -99,10 +102,17 @@ func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
 }
 
 func (c *Chatbot) CRC(ctx echo.Context) error {
-	return ctx.String(http.StatusOK, "Hello, World!")
+	crcToken := ctx.QueryParam("crc_token")
+	mac := hmac.New(sha256.New, []byte(c.config.Account.ConsumerSecret))
+	mac.Write([]byte(crcToken))
+	responseToken := "sha256=" + base64.StdEncoding.EncodeToString(mac.Sum(nil))
+
+	return ctx.JSON(http.StatusOK, map[string]string{
+		"response_token": responseToken,
+	})
 }
 
-func loadConfig(path string) (*ChatbotConfig, error) {
+func loadConfig(path string) (*config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -114,7 +124,7 @@ func loadConfig(path string) (*ChatbotConfig, error) {
 		return nil, err
 	}
 
-	var c ChatbotConfig
+	var c config
 	err = yaml.Unmarshal(b, &c)
 	if err != nil {
 		return nil, err
@@ -130,13 +140,13 @@ func run() error {
 	}
 
 	chatbot := New(c)
-	recipientID := "1245969416694587393" // @R8472
-	scenarioTag := "s1"
+	// recipientID := "1245969416694587393" // @R8472
+	// scenarioTag := "s1"
 
-	err = chatbot.SendMessage(recipientID, scenarioTag)
-	if err != nil {
-		return err
-	}
+	// err = chatbot.SendMessage(recipientID, scenarioTag)
+	// if err != nil {
+	// 	return err
+	// }
 
 	e := echo.New()
 
