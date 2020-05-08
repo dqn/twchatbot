@@ -1,6 +1,6 @@
 # twchatbot
 
-Make Twitter chatbot
+Twitter chatbot maker
 
 ## Installation
 
@@ -9,8 +9,6 @@ Make Twitter chatbot
 ## Usage
 
 [WIP]
-
-config.yml:
 
 ```yml
 account:
@@ -40,28 +38,4 @@ scenario:
       options:
         -
           label: Good bye!
-```
-
-```go
-package main
-
-import (
-	"github.com/dqn/twchatbot"
-)
-
-func main() {
-	var c twchatbot.ChatbotConfig
-
-	// unmarshal YAML
-
-	chatbot := twchatbot.New(&c)
-
-	recipientID := "..."
-	scenarioID := "s1"
-
-	err := chatbot.SendMessage(recipientID, scenarioID)
-	if err != nil {
-		// handle error
-	}
-}
 ```

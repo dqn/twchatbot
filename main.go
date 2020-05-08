@@ -1,7 +1,8 @@
-package twchatbot
+package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
@@ -45,19 +46,13 @@ type QuickReplyDefault struct {
 	Next string `yaml:"next"`
 }
 
-func New(config *ChatbotConfig) *Chatbot {
-	httpClient := oauth1.NewConfig(
-		config.Account.ConsumerKey,
-		config.Account.ConsumerSecret,
-	).Client(
-		oauth1.NoContext,
-		oauth1.NewToken(config.Account.AccessToken, config.Account.AccessTokenSecret),
-	)
+func New(c *ChatbotConfig) *Chatbot {
+	config := oauth1.NewConfig(c.Account.ConsumerKey, c.Account.ConsumerSecret)
+	token := oauth1.NewToken(c.Account.AccessToken, c.Account.AccessTokenSecret)
+	client := config.Client(oauth1.NoContext, token)
+	t := twitter.NewClient(client)
 
-	return &Chatbot{
-		config,
-		twitter.NewClient(httpClient),
-	}
+	return &Chatbot{c, t}
 }
 
 func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
@@ -95,4 +90,15 @@ func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
 	})
 
 	return err
+}
+
+func run() error {
+	return nil
+}
+
+func main() {
+	err := run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

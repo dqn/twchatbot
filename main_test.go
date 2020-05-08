@@ -1,4 +1,4 @@
-package twchatbot
+package main
 
 import (
 	"io/ioutil"
