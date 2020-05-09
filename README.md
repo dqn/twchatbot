@@ -1,6 +1,6 @@
 # twchatbot
 
-Twitter chatbot maker
+Twitter chatbot using Account Activity API
 
 ## Installation
 
