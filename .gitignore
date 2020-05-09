@@ -1,1 +1,6 @@
-/config.yml
+config.yml
+twchatbot
+
+deploy/.env
+deploy/twchatbot.conf
+deploy/twchatbot.service
