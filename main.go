@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,9 +45,12 @@ func run() error {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
+		fmt.Fprintf(os.Stderr, "Request: %v\n", string(reqBody))
+	}))
 
-	e.GET("/crc", chatbot.CRC)
-	e.GET("/webhook", chatbot.Webhook)
+	e.GET("/webhook", chatbot.GetWebhook)
+	e.POST("/webhook", chatbot.PostWebhook)
 
 	e.Logger.Fatal(e.Start(":3000"))
 

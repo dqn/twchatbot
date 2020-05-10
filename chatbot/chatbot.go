@@ -1,6 +1,9 @@
 package chatbot
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/dghubble/go-twitter/twitter"
@@ -52,6 +55,12 @@ func New(c *Config) *Chatbot {
 	t := twitter.NewClient(client)
 
 	return &Chatbot{c, t}
+}
+
+func (c *Chatbot) makeResponseToken(crcToken string) string {
+	mac := hmac.New(sha256.New, []byte(c.config.Account.ConsumerSecret))
+	mac.Write([]byte(crcToken))
+	return "sha256=" + base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 
 func (c *Chatbot) SendMessage(recipientID, scenarioID string) error {
